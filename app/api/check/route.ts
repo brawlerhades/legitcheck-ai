@@ -61,14 +61,16 @@ If you can read SKU / barcode text, include it in "barcodeOrSku".
       });
     }
 
-    const resp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.2,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content },
-      ],
-    });
+    const chosenModel = mode === "deep" ? "gpt-5.2" : "gpt-5-mini";
+
+const resp = await openai.chat.completions.create({
+  model: chosenModel,
+  temperature: 0.2,
+  messages: [
+    { role: "system", content: systemPrompt },
+    { role: "user", content },
+  ],
+});
 
     const raw = resp.choices?.[0]?.message?.content || "";
 
