@@ -231,6 +231,22 @@ export default function Home() {
                 )}
               </div>
             )}
+
+            {/* ✅ FOOTER LINKS */}
+            <footer className="pt-6 border-t border-white/10 text-center text-xs text-white/40">
+              <div className="flex items-center justify-center gap-4">
+                <a href="/privacy-policy" className="hover:text-white transition">
+                  Privacy Policy
+                </a>
+                <a href="/terms" className="hover:text-white transition">
+                  Terms
+                </a>
+                <a href="/contact" className="hover:text-white transition">
+                  Contact
+                </a>
+              </div>
+              <p className="mt-2">© {new Date().getFullYear()} LegitCheck AI</p>
+            </footer>
           </div>
         </div>
 
