@@ -1,11 +1,17 @@
-import "./globals.css";
+import type { Metadata } from "next";
 import Script from "next/script";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "LegitCheck AI",
+  description: "Upload sneaker photos → get authenticity confidence or red flags.",
+};
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
       <head>
@@ -17,6 +23,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
+
       <body>{children}</body>
     </html>
   );
