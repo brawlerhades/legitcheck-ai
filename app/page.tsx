@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AdSlot from "@/components/AdSlot";
 
 type Result = {
@@ -20,6 +20,22 @@ export default function Home() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // --- Monetization flags ---
+  const [isPro, setIsPro] = useState(false);
+
+  // Quick check ad gate:
+  const [quickUnlocked, setQuickUnlocked] = useState(false);
+  const [showQuickAdGate, setShowQuickAdGate] = useState(false);
+
+  useEffect(() => {
+    // Subscription mock: localStorage flag
+    // later we replace with real Stripe / login
+    const v = localStorage.getItem("isPro");
+    setIsPro(v === "true");
+  }, []);
+
+  const deepLocked = useMemo(() => mode === "deep" && !isPro, [mode, isPro]);
+
   async function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -29,7 +45,7 @@ export default function Home() {
     });
   }
 
-  async function onCheck() {
+  async function doRequest() {
     setLoading(true);
     setResult(null);
     setError(null);
@@ -68,6 +84,39 @@ export default function Home() {
     }
   }
 
+  async function onCheck() {
+    setError(null);
+    setResult(null);
+
+    // 1) Deep Research locked unless Pro
+    if (mode === "deep" && !isPro) {
+      setError("Deep Research is for Pro users only. Subscribe to unlock it.");
+      return;
+    }
+
+    // 2) Quick check requires ad gate (once per session)
+    if (mode === "quick" && !quickUnlocked) {
+      setShowQuickAdGate(true);
+      return;
+    }
+
+    // If passed checks → do request
+    await doRequest();
+  }
+
+  function enablePro() {
+    // mock subscription button
+    localStorage.setItem("isPro", "true");
+    setIsPro(true);
+    setError(null);
+  }
+
+  function disablePro() {
+    localStorage.setItem("isPro", "false");
+    setIsPro(false);
+    setError(null);
+  }
+
   return (
     <main className="min-h-screen bg-black text-white p-6">
       <div className="mx-auto max-w-7xl w-full flex items-start justify-center gap-6">
@@ -78,10 +127,45 @@ export default function Home() {
 
         {/* CENTER */}
         <div className="w-full max-w-xl border border-white/10 rounded-2xl p-6 bg-white/5">
-          <h1 className="text-2xl font-bold">LegitCheck AI</h1>
-          <p className="text-white/70 mt-1">
-            Upload sneaker photos → get authenticity confidence or red flags.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">LegitCheck AI</h1>
+              <p className="text-white/70 mt-1">
+                Upload sneaker photos → get authenticity confidence or red flags.
+              </p>
+            </div>
+
+            {/* Pro badge + mock buttons */}
+            <div className="text-right">
+              <div
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm border ${
+                  isPro
+                    ? "border-green-400/30 text-green-200 bg-green-500/10"
+                    : "border-white/15 text-white/70 bg-white/5"
+                }`}
+              >
+                {isPro ? "✅ Pro" : "Free"}
+              </div>
+
+              <div className="mt-2 flex gap-2 justify-end">
+                {!isPro ? (
+                  <button
+                    onClick={enablePro}
+                    className="text-xs px-3 py-1 rounded-lg bg-white text-black font-semibold hover:opacity-90"
+                  >
+                    Subscribe (mock)
+                  </button>
+                ) : (
+                  <button
+                    onClick={disablePro}
+                    className="text-xs px-3 py-1 rounded-lg border border-white/15 text-white/70 hover:text-white"
+                  >
+                    Cancel Pro
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
 
           <div className="mt-6 space-y-4">
             <div>
@@ -106,9 +190,15 @@ export default function Home() {
                   }`}
                   onClick={() => setMode("deep")}
                 >
-                  Deep Research
+                  Deep Research 🔒
                 </button>
               </div>
+
+              {deepLocked && (
+                <div className="mt-2 text-xs text-yellow-200 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                  Deep Research is locked. Subscribe to unlock.
+                </div>
+              )}
             </div>
 
             <div>
@@ -231,22 +321,6 @@ export default function Home() {
                 )}
               </div>
             )}
-
-            {/* ✅ FOOTER LINKS */}
-            <footer className="pt-6 border-t border-white/10 text-center text-xs text-white/40">
-              <div className="flex items-center justify-center gap-4">
-                <a href="/privacy-policy" className="hover:text-white transition">
-                  Privacy Policy
-                </a>
-                <a href="/terms" className="hover:text-white transition">
-                  Terms
-                </a>
-                <a href="/contact" className="hover:text-white transition">
-                  Contact
-                </a>
-              </div>
-              <p className="mt-2">© {new Date().getFullYear()} LegitCheck AI</p>
-            </footer>
           </div>
         </div>
 
@@ -255,6 +329,47 @@ export default function Home() {
           <AdSlot label="Ad (Right)" />
         </div>
       </div>
+
+      {/* QUICK CHECK AD GATE MODAL */}
+      {showQuickAdGate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0b0b0b] p-5">
+            <div className="text-lg font-bold">Watch an ad to continue</div>
+            <p className="text-white/60 text-sm mt-1">
+              Quick Check is free, supported by ads.
+            </p>
+
+            <div className="mt-4">
+              <AdSlot label="Quick Check Ad" />
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                className="flex-1 bg-white text-black font-semibold py-3 rounded-lg hover:opacity-90"
+                onClick={() => {
+                  setQuickUnlocked(true);
+                  setShowQuickAdGate(false);
+                  // auto run check now that its unlocked
+                  doRequest();
+                }}
+              >
+                I watched ✅ Continue
+              </button>
+
+              <button
+                className="px-4 py-3 rounded-lg border border-white/15 text-white/70 hover:text-white"
+                onClick={() => setShowQuickAdGate(false)}
+              >
+                Cancel
+              </button>
+            </div>
+
+            <p className="text-xs text-white/40 mt-3">
+              (This is a simple first version. We’ll upgrade it later.)
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
